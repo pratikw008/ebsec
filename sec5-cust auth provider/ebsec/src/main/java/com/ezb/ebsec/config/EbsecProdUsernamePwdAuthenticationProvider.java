@@ -2,21 +2,26 @@ package com.ezb.ebsec.config;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("!prod")
-public class EbsecUsernamePwdAuthenticationProvider implements AuthenticationProvider {
-
+@Profile("prod")
+public class EbsecProdUsernamePwdAuthenticationProvider implements AuthenticationProvider {
+    
     private final UserDetailsService userDetailsService;
+    
+    private final PasswordEncoder passwordEncoder;
 
-    public EbsecUsernamePwdAuthenticationProvider(UserDetailsService userDetailsService) {
+    public EbsecProdUsernamePwdAuthenticationProvider(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
         this.userDetailsService = userDetailsService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -24,7 +29,12 @@ public class EbsecUsernamePwdAuthenticationProvider implements AuthenticationPro
         String username = authentication.getName();
         String pwd = authentication.getCredentials().toString();
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-        return new UsernamePasswordAuthenticationToken(username, pwd, userDetails.getAuthorities());
+        if(passwordEncoder.matches(pwd, userDetails.getPassword())) {
+            return new UsernamePasswordAuthenticationToken(username, pwd, userDetails.getAuthorities());
+        }
+        else {
+            throw new BadCredentialsException("Invalid password");
+        }
     }
 
     @Override
