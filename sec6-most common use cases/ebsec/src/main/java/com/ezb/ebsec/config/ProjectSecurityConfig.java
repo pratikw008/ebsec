@@ -1,5 +1,7 @@
 package com.ezb.ebsec.config;
 
+import com.ezb.ebsec.exceptionHandling.CustomAccessDeniedHandler;
+import com.ezb.ebsec.exceptionHandling.CustomBasicAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -18,12 +20,15 @@ public class ProjectSecurityConfig {
 
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(CsrfConfigurer::disable)
+        http
+            .requiresChannel(reqChannel -> reqChannel.anyRequest().requiresInsecure())
+            .csrf(CsrfConfigurer::disable)
             .authorizeHttpRequests(request -> request
                 .requestMatchers("/myAccount", "/myBalance", "/myCards", "/myLoans").authenticated()
                 .requestMatchers("/notices", "/contact", "/error", "/register").permitAll());
         http.formLogin(Customizer.withDefaults());
-        http.httpBasic(Customizer.withDefaults());
+        http.httpBasic(hbc -> hbc.authenticationEntryPoint(new CustomBasicAuthenticationEntryPoint()));
+        http.exceptionHandling(ehc -> ehc.accessDeniedHandler(new CustomAccessDeniedHandler()));
         return http.build();
     }
 
